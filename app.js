@@ -57,7 +57,6 @@ const levels = {
 const promptRow = document.querySelector("#promptRow");
 const choices = document.querySelector("#choices");
 const feedback = document.querySelector("#feedback");
-const nextButton = document.querySelector("#nextButton");
 const resetButton = document.querySelector("#resetButton");
 const scoreEl = document.querySelector("#score");
 const streakEl = document.querySelector("#streak");
@@ -204,8 +203,6 @@ levelButtons.forEach((button) => {
     renderQuestion();
   });
 });
-
-nextButton.addEventListener("click", renderQuestion);
 
 resetButton.addEventListener("click", () => {
   score = 0;

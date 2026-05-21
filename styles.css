@@ -382,12 +382,6 @@ h1 {
   cursor: pointer;
 }
 
-#nextButton {
-  border: 0;
-  background: var(--ink);
-  color: #ffffff;
-}
-
 .reference {
   margin-top: 20px;
   padding: 18px;
