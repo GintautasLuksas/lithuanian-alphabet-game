@@ -197,7 +197,7 @@ function chooseLetter(button, letter) {
 
   scoreEl.textContent = score;
   streakEl.textContent = streak;
-  nextQuestionTimer = window.setTimeout(renderQuestion, letter === currentAnswer ? 950 : 1600);
+  nextQuestionTimer = window.setTimeout(renderQuestion, 650);
 }
 
 function speak(letter) {
