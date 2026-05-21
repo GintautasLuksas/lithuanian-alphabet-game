@@ -59,7 +59,6 @@ const choices = document.querySelector("#choices");
 const feedback = document.querySelector("#feedback");
 const nextButton = document.querySelector("#nextButton");
 const resetButton = document.querySelector("#resetButton");
-const hearButton = document.querySelector("#hearButton");
 const scoreEl = document.querySelector("#score");
 const streakEl = document.querySelector("#streak");
 const alphabetStrip = document.querySelector("#alphabetStrip");
@@ -187,7 +186,6 @@ function chooseLetter(button, letter) {
     streak += 1;
     feedback.textContent = levels[level].success(previousLetter, currentAnswer);
     feedback.classList.add("good");
-    speak(currentAnswer);
   } else {
     streak = 0;
     button.classList.add("wrong");
@@ -198,16 +196,6 @@ function chooseLetter(button, letter) {
   scoreEl.textContent = score;
   streakEl.textContent = streak;
   nextQuestionTimer = window.setTimeout(renderQuestion, 650);
-}
-
-function speak(letter) {
-  if (!("speechSynthesis" in window)) return;
-
-  const utterance = new SpeechSynthesisUtterance(letter);
-  utterance.lang = "lt-LT";
-  utterance.rate = 0.72;
-  window.speechSynthesis.cancel();
-  window.speechSynthesis.speak(utterance);
 }
 
 levelButtons.forEach((button) => {
@@ -226,7 +214,5 @@ resetButton.addEventListener("click", () => {
   streakEl.textContent = streak;
   renderQuestion();
 });
-
-hearButton.addEventListener("click", () => speak(currentAnswer));
 
 renderQuestion();
