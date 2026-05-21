@@ -37,20 +37,20 @@ const levels = {
   1: {
     choiceCount: 4,
     prompt: "Kuri raidė eina toliau?",
-    success: (before, answer) => `Teisingai! Po ${before} eina ${answer}.`,
-    miss: (before, answer) => `Beveik! Po ${before} eina ${answer}.`
+    success: (_clue, answer) => `Teisingai! Toliau eina ${answer}.`,
+    miss: (_clue, answer) => `Beveik! Čia tinka ${answer}.`
   },
   2: {
-    choiceCount: 5,
-    prompt: "Kuri raidė pasislėpė viduryje?",
-    success: (_before, answer) => `Puiku! Trūkstama raidė yra ${answer}.`,
-    miss: (_before, answer) => `Dar truputį. Čia turėjo būti ${answer}.`
+    choiceCount: 4,
+    prompt: "Kokios 3 raidės eina toliau?",
+    success: (_clue, answer) => `Puiku! Toliau eina ${answer}.`,
+    miss: (_clue, answer) => `Dar truputį. Teisinga seka: ${answer}.`
   },
   3: {
-    choiceCount: 6,
-    prompt: "Kuri raidė tinka prie šios mažos užuominos?",
-    success: (before, answer) => `Šaunu! Po ${before} eina ${answer}.`,
-    miss: (before, answer) => `Gera pastanga. Po ${before} eina ${answer}.`
+    choiceCount: 4,
+    prompt: "Kokia visa 5 raidžių seka?",
+    success: (_clue, answer) => `Šaunu! Visa seka: ${answer}.`,
+    miss: (_clue, answer) => `Gera pastanga. Teisinga seka: ${answer}.`
   }
 };
 
@@ -69,7 +69,7 @@ let streak = 0;
 let level = 1;
 let currentAnswer = "";
 let currentIndex = 0;
-let previousLetter = "";
+let clueText = "";
 let locked = false;
 let nextQuestionTimer = null;
 
@@ -81,9 +81,16 @@ function randomBetween(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-function buildChoices(answerIndex, count) {
-  const answer = alphabet[answerIndex];
-  const pool = new Set([answer]);
+function getSequence(start, length) {
+  return alphabet.slice(start, start + length);
+}
+
+function getSequenceLabel(start, length) {
+  return getSequence(start, length).join(" ");
+}
+
+function buildSingleLetterChoices(answerIndex, count) {
+  const pool = new Set([alphabet[answerIndex]]);
   const spread = count + 3;
 
   while (pool.size < count) {
@@ -95,29 +102,52 @@ function buildChoices(answerIndex, count) {
   return shuffle([...pool]);
 }
 
+function buildSequenceChoices(answerStart, sequenceLength, count) {
+  const maxStart = alphabet.length - sequenceLength;
+  const pool = new Set([getSequenceLabel(answerStart, sequenceLength)]);
+
+  while (pool.size < count) {
+    const offset = randomBetween(-4, 4);
+    const candidateStart = Math.max(0, Math.min(maxStart, answerStart + offset));
+    pool.add(getSequenceLabel(candidateStart, sequenceLength));
+  }
+
+  return shuffle([...pool]);
+}
+
 function makeQuestion() {
   if (level === 1) {
     currentIndex = randomBetween(2, alphabet.length - 1);
     currentAnswer = alphabet[currentIndex];
-    previousLetter = alphabet[currentIndex - 1];
-    return [...alphabet.slice(Math.max(0, currentIndex - 4), currentIndex), "?"];
+    clueText = alphabet[currentIndex - 1];
+    return {
+      cards: [...alphabet.slice(Math.max(0, currentIndex - 4), currentIndex), "?"],
+      choices: buildSingleLetterChoices(currentIndex, levels[level].choiceCount)
+    };
   }
 
   if (level === 2) {
-    const start = randomBetween(0, alphabet.length - 5);
-    const hiddenOffset = randomBetween(1, 3);
-    currentIndex = start + hiddenOffset;
-    currentAnswer = alphabet[currentIndex];
-    previousLetter = alphabet[currentIndex - 1];
-    return alphabet.slice(start, start + 5).map((letter, index) => (
-      index === hiddenOffset ? "?" : letter
-    ));
+    const start = randomBetween(0, alphabet.length - 4);
+    currentIndex = start;
+    clueText = alphabet[start];
+    currentAnswer = getSequenceLabel(start + 1, 3);
+    return {
+      cards: [alphabet[start], "?", "?", "?"],
+      choices: buildSequenceChoices(start + 1, 3, levels[level].choiceCount)
+    };
   }
 
-  currentIndex = randomBetween(1, alphabet.length - 1);
-  currentAnswer = alphabet[currentIndex];
-  previousLetter = alphabet[currentIndex - 1];
-  return [previousLetter, "?"];
+  const start = randomBetween(0, alphabet.length - 5);
+  const visibleOffset = randomBetween(0, 4);
+  const sequence = getSequence(start, 5);
+  currentIndex = start + visibleOffset;
+  clueText = alphabet[currentIndex];
+  currentAnswer = sequence.join(" ");
+
+  return {
+    cards: sequence.map((letter, index) => (index === visibleOffset ? letter : "?")),
+    choices: buildSequenceChoices(start, 5, levels[level].choiceCount)
+  };
 }
 
 function renderAlphabetStrip() {
@@ -145,8 +175,10 @@ function renderQuestion() {
   feedback.className = "feedback";
   questionText.textContent = levels[level].prompt;
 
+  const question = makeQuestion();
+
   promptRow.innerHTML = "";
-  makeQuestion().forEach((letter) => {
+  question.cards.forEach((letter) => {
     const card = document.createElement("div");
     card.className = `letter-card${letter === "?" ? " blank" : ""}`;
     card.textContent = letter;
@@ -154,13 +186,13 @@ function renderQuestion() {
   });
 
   choices.innerHTML = "";
-  buildChoices(currentIndex, levels[level].choiceCount).forEach((letter) => {
+  question.choices.forEach((answer) => {
     const button = document.createElement("button");
-    button.className = "choice";
+    button.className = `choice${answer.includes(" ") ? " sequence" : ""}`;
     button.type = "button";
-    button.textContent = letter;
-    button.setAttribute("aria-label", `Pasirinkti raidę ${letter}`);
-    button.addEventListener("click", () => chooseLetter(button, letter));
+    button.textContent = answer;
+    button.setAttribute("aria-label", `Pasirinkti ${answer}`);
+    button.addEventListener("click", () => chooseAnswer(button, answer));
     choices.append(button);
   });
 
@@ -168,7 +200,7 @@ function renderQuestion() {
   renderAlphabetStrip();
 }
 
-function chooseLetter(button, letter) {
+function chooseAnswer(button, answer) {
   if (locked) return;
   locked = true;
 
@@ -180,15 +212,15 @@ function chooseLetter(button, letter) {
     }
   });
 
-  if (letter === currentAnswer) {
+  if (answer === currentAnswer) {
     score += level;
     streak += 1;
-    feedback.textContent = levels[level].success(previousLetter, currentAnswer);
+    feedback.textContent = levels[level].success(clueText, currentAnswer);
     feedback.classList.add("good");
   } else {
     streak = 0;
     button.classList.add("wrong");
-    feedback.textContent = levels[level].miss(previousLetter, currentAnswer);
+    feedback.textContent = levels[level].miss(clueText, currentAnswer);
     feedback.classList.add("try");
   }
 
