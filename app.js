@@ -35,22 +35,19 @@ const alphabet = [
 
 const levels = {
   1: {
-    choiceCount: 4,
     prompt: "Kuri raidė eina toliau?",
-    success: (_clue, answer) => `Teisingai! Toliau eina ${answer}.`,
-    miss: (_clue, answer) => `Beveik! Čia tinka ${answer}.`
+    success: (answer) => `Teisingai! Toliau eina ${answer}.`,
+    miss: (answer) => `Beveik! Čia tinka ${answer}.`
   },
   2: {
-    choiceCount: 4,
-    prompt: "Kokios 3 raidės eina toliau?",
-    success: (_clue, answer) => `Puiku! Toliau eina ${answer}.`,
-    miss: (_clue, answer) => `Dar truputį. Teisinga seka: ${answer}.`
+    prompt: "Paspausk 3 kitas raides iš eilės.",
+    success: (answer) => `Puiku! Toliau eina ${answer}.`,
+    miss: (answer) => `Ieškok raidės ${answer}.`
   },
   3: {
-    choiceCount: 4,
-    prompt: "Kokia visa 5 raidžių seka?",
-    success: (_clue, answer) => `Šaunu! Visa seka: ${answer}.`,
-    miss: (_clue, answer) => `Gera pastanga. Teisinga seka: ${answer}.`
+    prompt: "Užpildyk 5 raidžių seką po vieną raidę.",
+    success: (answer) => `Šaunu! Visa seka: ${answer}.`,
+    miss: (answer) => `Ieškok raidės ${answer}.`
   }
 };
 
@@ -67,12 +64,11 @@ const levelButtons = [...document.querySelectorAll(".level-button")];
 let score = 0;
 let streak = 0;
 let level = 1;
-let currentAnswer = "";
 let currentIndex = 0;
-let clueText = "";
-let currentRevealCards = [];
+let currentQuestion = null;
 let locked = false;
 let nextQuestionTimer = null;
+let wrongTimer = null;
 
 function shuffle(items) {
   return [...items].sort(() => Math.random() - 0.5);
@@ -86,31 +82,14 @@ function getSequence(start, length) {
   return alphabet.slice(start, start + length);
 }
 
-function getSequenceLabel(start, length) {
-  return getSequence(start, length).join(" ");
-}
-
-function buildSingleLetterChoices(answerIndex, count) {
-  const pool = new Set([alphabet[answerIndex]]);
-  const spread = count + 3;
+function buildLetterChoices(answerIndexes, count) {
+  const pool = new Set(answerIndexes.map((index) => alphabet[index]));
+  const center = answerIndexes[0];
 
   while (pool.size < count) {
-    const offset = randomBetween(-spread, spread);
-    const candidateIndex = Math.max(0, Math.min(alphabet.length - 1, answerIndex + offset));
+    const offset = randomBetween(-6, 6);
+    const candidateIndex = Math.max(0, Math.min(alphabet.length - 1, center + offset));
     pool.add(alphabet[candidateIndex]);
-  }
-
-  return shuffle([...pool]);
-}
-
-function buildSequenceChoices(answerStart, sequenceLength, count) {
-  const maxStart = alphabet.length - sequenceLength;
-  const pool = new Set([getSequenceLabel(answerStart, sequenceLength)]);
-
-  while (pool.size < count) {
-    const offset = randomBetween(-4, 4);
-    const candidateStart = Math.max(0, Math.min(maxStart, answerStart + offset));
-    pool.add(getSequenceLabel(candidateStart, sequenceLength));
   }
 
   return shuffle([...pool]);
@@ -118,39 +97,47 @@ function buildSequenceChoices(answerStart, sequenceLength, count) {
 
 function makeQuestion() {
   if (level === 1) {
-    currentIndex = randomBetween(2, alphabet.length - 1);
-    currentAnswer = alphabet[currentIndex];
-    clueText = alphabet[currentIndex - 1];
+    const answerIndex = randomBetween(2, alphabet.length - 1);
+    const cards = [...alphabet.slice(Math.max(0, answerIndex - 4), answerIndex), "?"];
+
     return {
-      cards: [...alphabet.slice(Math.max(0, currentIndex - 4), currentIndex), "?"],
-      revealCards: [...alphabet.slice(Math.max(0, currentIndex - 4), currentIndex), currentAnswer],
-      choices: buildSingleLetterChoices(currentIndex, levels[level].choiceCount)
+      answerIndexes: [answerIndex],
+      cards,
+      choices: buildLetterChoices([answerIndex], 4),
+      cursor: 0,
+      revealCards: [...cards.slice(0, -1), alphabet[answerIndex]],
+      targetText: alphabet[answerIndex]
     };
   }
 
   if (level === 2) {
     const start = randomBetween(0, alphabet.length - 4);
-    currentIndex = start;
-    clueText = alphabet[start];
-    currentAnswer = getSequenceLabel(start + 1, 3);
+    const answerIndexes = [start + 1, start + 2, start + 3];
+
     return {
+      answerIndexes,
       cards: [alphabet[start], "?", "?", "?"],
-      revealCards: [alphabet[start], ...getSequence(start + 1, 3)],
-      choices: buildSequenceChoices(start + 1, 3, levels[level].choiceCount)
+      choices: buildLetterChoices(answerIndexes, 6),
+      cursor: 0,
+      revealCards: [alphabet[start], ...answerIndexes.map((index) => alphabet[index])],
+      targetText: answerIndexes.map((index) => alphabet[index]).join(" ")
     };
   }
 
   const start = randomBetween(0, alphabet.length - 5);
   const visibleOffset = randomBetween(0, 4);
   const sequence = getSequence(start, 5);
-  currentIndex = start + visibleOffset;
-  clueText = alphabet[currentIndex];
-  currentAnswer = sequence.join(" ");
+  const answerIndexes = sequence
+    .map((_letter, index) => start + index)
+    .filter((index) => index !== start + visibleOffset);
 
   return {
+    answerIndexes,
     cards: sequence.map((letter, index) => (index === visibleOffset ? letter : "?")),
+    choices: buildLetterChoices(answerIndexes, 7),
+    cursor: 0,
     revealCards: sequence,
-    choices: buildSequenceChoices(start, 5, levels[level].choiceCount)
+    targetText: sequence.join(" ")
   };
 }
 
@@ -172,42 +159,58 @@ function renderLevels() {
   });
 }
 
-function renderQuestion() {
-  window.clearTimeout(nextQuestionTimer);
-  locked = false;
-  feedback.textContent = "";
-  feedback.className = "feedback";
-  questionText.textContent = levels[level].prompt;
-
-  const question = makeQuestion();
-  currentRevealCards = question.revealCards;
-
+function renderCards(cards) {
   promptRow.innerHTML = "";
-  question.cards.forEach((letter) => {
+  cards.forEach((letter) => {
     const card = document.createElement("div");
     card.className = `letter-card${letter === "?" ? " blank" : ""}`;
     card.textContent = letter;
     promptRow.append(card);
   });
+}
 
+function renderChoices() {
   choices.innerHTML = "";
-  question.choices.forEach((answer) => {
+  currentQuestion.choices.forEach((letter) => {
     const button = document.createElement("button");
-    button.className = `choice${answer.includes(" ") ? " sequence" : ""}`;
+    button.className = "choice";
     button.type = "button";
-    button.textContent = answer;
-    button.setAttribute("aria-label", `Pasirinkti ${answer}`);
-    button.addEventListener("click", () => chooseAnswer(button, answer));
+    button.textContent = letter;
+    button.setAttribute("aria-label", `Pasirinkti raidę ${letter}`);
+    button.addEventListener("click", () => chooseAnswer(button, letter));
     choices.append(button);
   });
+}
 
+function renderQuestion() {
+  window.clearTimeout(nextQuestionTimer);
+  window.clearTimeout(wrongTimer);
+  locked = false;
+  feedback.textContent = "";
+  feedback.className = "feedback";
+  questionText.textContent = levels[level].prompt;
+  currentQuestion = makeQuestion();
+  currentIndex = currentQuestion.answerIndexes[0];
+
+  renderCards(currentQuestion.cards);
+  renderChoices();
   renderLevels();
   renderAlphabetStrip();
 }
 
-function revealAnswerCards() {
+function revealNextLetter(letter) {
+  const blankIndex = currentQuestion.cards.indexOf("?");
+  if (blankIndex === -1) return;
+
+  currentQuestion.cards[blankIndex] = letter;
+  const card = promptRow.children[blankIndex];
+  card.className = "letter-card revealed";
+  card.textContent = letter;
+}
+
+function revealFullAnswer() {
   promptRow.innerHTML = "";
-  currentRevealCards.forEach((letter) => {
+  currentQuestion.revealCards.forEach((letter) => {
     const card = document.createElement("div");
     card.className = "letter-card revealed";
     card.textContent = letter;
@@ -215,34 +218,60 @@ function revealAnswerCards() {
   });
 }
 
-function chooseAnswer(button, answer) {
-  if (locked) return;
+function finishQuestion() {
   locked = true;
-
-  const buttons = [...choices.querySelectorAll("button")];
-  buttons.forEach((choice) => {
-    choice.disabled = true;
-    if (choice.textContent === currentAnswer) {
-      choice.classList.add("correct");
-    }
-  });
-
-  if (answer === currentAnswer) {
-    score += level;
-    streak += 1;
-    feedback.textContent = levels[level].success(clueText, currentAnswer);
-    feedback.classList.add("good");
-    revealAnswerCards();
-  } else {
-    streak = 0;
-    button.classList.add("wrong");
-    feedback.textContent = levels[level].miss(clueText, currentAnswer);
-    feedback.classList.add("try");
-  }
-
+  score += level;
+  streak += 1;
   scoreEl.textContent = score;
   streakEl.textContent = streak;
-  nextQuestionTimer = window.setTimeout(renderQuestion, 650);
+  feedback.textContent = levels[level].success(currentQuestion.targetText);
+  feedback.classList.add("good");
+
+  if (level === 1) {
+    revealFullAnswer();
+  }
+
+  choices.querySelectorAll("button").forEach((button) => {
+    button.disabled = true;
+  });
+  nextQuestionTimer = window.setTimeout(renderQuestion, 850);
+}
+
+function showMistake(button, expectedLetter) {
+  streak = 0;
+  streakEl.textContent = streak;
+  feedback.textContent = levels[level].miss(expectedLetter);
+  feedback.className = "feedback try";
+  button.classList.add("wrong");
+  window.clearTimeout(wrongTimer);
+  wrongTimer = window.setTimeout(() => {
+    button.classList.remove("wrong");
+  }, 450);
+}
+
+function chooseAnswer(button, letter) {
+  if (locked) return;
+
+  const expectedIndex = currentQuestion.answerIndexes[currentQuestion.cursor];
+  const expectedLetter = alphabet[expectedIndex];
+
+  if (letter !== expectedLetter) {
+    showMistake(button, expectedLetter);
+    return;
+  }
+
+  revealNextLetter(letter);
+  currentQuestion.cursor += 1;
+  currentIndex = currentQuestion.answerIndexes[currentQuestion.cursor] ?? expectedIndex;
+  renderAlphabetStrip();
+
+  if (currentQuestion.cursor === currentQuestion.answerIndexes.length) {
+    finishQuestion();
+    return;
+  }
+
+  feedback.textContent = `Taip! Dabar rask ${alphabet[currentQuestion.answerIndexes[currentQuestion.cursor]]}.`;
+  feedback.className = "feedback good";
 }
 
 levelButtons.forEach((button) => {

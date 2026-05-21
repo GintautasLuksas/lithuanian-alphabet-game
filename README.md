@@ -7,8 +7,8 @@ Open `index.html` in a browser and choose which letter fits the blank space.
 Levels:
 
 - Level 1: choose the next letter after a short sequence.
-- Level 2: see one letter and choose the next three letters.
-- Level 3: see a five-letter sequence with only one visible clue and choose the full sequence.
+- Level 2: see one letter and tap the next three letters one by one.
+- Level 3: see a five-letter sequence with one visible clue and fill the missing letters one by one.
 
 Alphabet used:
 
