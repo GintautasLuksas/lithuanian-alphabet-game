@@ -73,6 +73,7 @@ let currentAnswer = "";
 let currentIndex = 0;
 let previousLetter = "";
 let locked = false;
+let nextQuestionTimer = null;
 
 function shuffle(items) {
   return [...items].sort(() => Math.random() - 0.5);
@@ -140,6 +141,7 @@ function renderLevels() {
 }
 
 function renderQuestion() {
+  window.clearTimeout(nextQuestionTimer);
   locked = false;
   feedback.textContent = "";
   feedback.className = "feedback";
@@ -195,6 +197,7 @@ function chooseLetter(button, letter) {
 
   scoreEl.textContent = score;
   streakEl.textContent = streak;
+  nextQuestionTimer = window.setTimeout(renderQuestion, letter === currentAnswer ? 950 : 1600);
 }
 
 function speak(letter) {
