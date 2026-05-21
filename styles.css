@@ -261,6 +261,12 @@ h1 {
   background: #f1f8ff;
 }
 
+.letter-card.revealed {
+  border-color: rgba(58, 166, 107, 0.45);
+  background: #ecfff4;
+  color: #208752;
+}
+
 .helper {
   display: flex;
   justify-content: center;

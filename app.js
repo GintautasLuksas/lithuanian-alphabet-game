@@ -70,6 +70,7 @@ let level = 1;
 let currentAnswer = "";
 let currentIndex = 0;
 let clueText = "";
+let currentRevealCards = [];
 let locked = false;
 let nextQuestionTimer = null;
 
@@ -122,6 +123,7 @@ function makeQuestion() {
     clueText = alphabet[currentIndex - 1];
     return {
       cards: [...alphabet.slice(Math.max(0, currentIndex - 4), currentIndex), "?"],
+      revealCards: [...alphabet.slice(Math.max(0, currentIndex - 4), currentIndex), currentAnswer],
       choices: buildSingleLetterChoices(currentIndex, levels[level].choiceCount)
     };
   }
@@ -133,6 +135,7 @@ function makeQuestion() {
     currentAnswer = getSequenceLabel(start + 1, 3);
     return {
       cards: [alphabet[start], "?", "?", "?"],
+      revealCards: [alphabet[start], ...getSequence(start + 1, 3)],
       choices: buildSequenceChoices(start + 1, 3, levels[level].choiceCount)
     };
   }
@@ -146,6 +149,7 @@ function makeQuestion() {
 
   return {
     cards: sequence.map((letter, index) => (index === visibleOffset ? letter : "?")),
+    revealCards: sequence,
     choices: buildSequenceChoices(start, 5, levels[level].choiceCount)
   };
 }
@@ -176,6 +180,7 @@ function renderQuestion() {
   questionText.textContent = levels[level].prompt;
 
   const question = makeQuestion();
+  currentRevealCards = question.revealCards;
 
   promptRow.innerHTML = "";
   question.cards.forEach((letter) => {
@@ -200,6 +205,16 @@ function renderQuestion() {
   renderAlphabetStrip();
 }
 
+function revealAnswerCards() {
+  promptRow.innerHTML = "";
+  currentRevealCards.forEach((letter) => {
+    const card = document.createElement("div");
+    card.className = "letter-card revealed";
+    card.textContent = letter;
+    promptRow.append(card);
+  });
+}
+
 function chooseAnswer(button, answer) {
   if (locked) return;
   locked = true;
@@ -217,6 +232,7 @@ function chooseAnswer(button, answer) {
     streak += 1;
     feedback.textContent = levels[level].success(clueText, currentAnswer);
     feedback.classList.add("good");
+    revealAnswerCards();
   } else {
     streak = 0;
     button.classList.add("wrong");
