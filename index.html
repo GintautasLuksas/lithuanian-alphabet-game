@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="lt">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Lietuviška Abėcėlės Kelionė</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main class="shell">
+      <section class="hero" aria-labelledby="title">
+        <div>
+          <p class="eyebrow">Lietuviška abėcėlė</p>
+          <h1 id="title">Raidžių kelionė</h1>
+          <p class="subtitle">Pasirink, kuri raidė eina toliau.</p>
+        </div>
+        <div class="score-card" aria-label="Rezultatai">
+          <span>Taškai</span>
+          <strong id="score">0</strong>
+          <span>Iš eilės</span>
+          <strong id="streak">0</strong>
+        </div>
+      </section>
+
+      <section class="game-panel" aria-live="polite">
+        <div class="scene" aria-hidden="true">
+          <div class="sun"></div>
+          <div class="cloud cloud-one"></div>
+          <div class="cloud cloud-two"></div>
+          <div class="hill hill-back"></div>
+          <div class="hill hill-front"></div>
+          <div class="path"></div>
+        </div>
+
+        <div class="prompt-row" id="promptRow" aria-label="Raidžių seka"></div>
+
+        <div class="helper">
+          <button class="quiet-button" id="hearButton" type="button">Girdėti raidę</button>
+          <p id="questionText">Kuri raidė eina toliau?</p>
+        </div>
+
+        <div class="choices" id="choices"></div>
+
+        <div class="feedback" id="feedback" role="status"></div>
+
+        <div class="actions">
+          <button id="nextButton" type="button">Kita užduotis</button>
+          <button class="secondary" id="resetButton" type="button">Pradėti iš naujo</button>
+        </div>
+      </section>
+
+      <section class="reference" aria-labelledby="alphabetTitle">
+        <div class="reference-heading">
+          <h2 id="alphabetTitle">Visa lietuviška abėcėlė</h2>
+          <p>32 raidės: nėra Q, W ir X.</p>
+        </div>
+        <div class="alphabet-strip" id="alphabetStrip"></div>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
