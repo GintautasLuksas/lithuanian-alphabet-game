@@ -100,7 +100,7 @@ function makeQuestion() {
     currentIndex = randomBetween(2, alphabet.length - 1);
     currentAnswer = alphabet[currentIndex];
     previousLetter = alphabet[currentIndex - 1];
-    return [...alphabet.slice(currentIndex - 4, currentIndex), "?"].filter(Boolean);
+    return [...alphabet.slice(Math.max(0, currentIndex - 4), currentIndex), "?"];
   }
 
   if (level === 2) {
