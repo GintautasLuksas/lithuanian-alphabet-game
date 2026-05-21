@@ -12,7 +12,7 @@
         <div>
           <p class="eyebrow">Lietuviška abėcėlė</p>
           <h1 id="title">Raidžių kelionė</h1>
-          <p class="subtitle">Pasirink, kuri raidė eina toliau.</p>
+          <p class="subtitle">Pasirink, kuri raidė tinka į tuščią vietą.</p>
         </div>
         <div class="score-card" aria-label="Rezultatai">
           <span>Taškai</span>
@@ -30,6 +30,21 @@
           <div class="hill hill-back"></div>
           <div class="hill hill-front"></div>
           <div class="path"></div>
+        </div>
+
+        <div class="level-picker" aria-label="Pasirinkti lygį">
+          <button class="level-button active" type="button" data-level="1">
+            1 lygis
+            <span>Sekanti raidė</span>
+          </button>
+          <button class="level-button" type="button" data-level="2">
+            2 lygis
+            <span>Trūksta viduryje</span>
+          </button>
+          <button class="level-button" type="button" data-level="3">
+            3 lygis
+            <span>Mažiau užuominų</span>
+          </button>
         </div>
 
         <div class="prompt-row" id="promptRow" aria-label="Raidžių seka"></div>
